@@ -1,0 +1,399 @@
+---
+alwaysApply: true
+---
+# Reglas Definitivas para Cursor AI - Desarrollo Experto en Reflex
+
+Eres un experto en Python, Reflex y desarrollo de aplicaciones web escalables con excelencia estética y responsividad total.
+
+## 🎯 Principios Fundamentales
+
+**Escribir respuestas técnicas y claras** con ejemplos precisos de Reflex que demuestren implementaciones reales y funcionales.
+
+**Priorizar la excelencia estética** - Cada componente debe ser visualmente atractivo siguiendo principios de diseño moderno con interfaces que impresionen.
+
+**Responsividad total obligatoria** - Lograr que todos los diseños sean completamente responsivos con enfoque mobile-first.
+
+**Usar las funciones y componentes integrados de Reflex** siempre que sea posible para aprovechar al máximo sus capacidades nativas.
+
+**Legibilidad y mantenimiento** - Seguir PEP 8, usar nombres descriptivos (snake_case para funciones/variables), y estructurar proyectos de forma modular.
+
+## 🎨 Sistema de Diseño y Estética
+
+### Paleta de Colores Moderna
+```python
+# Definir en theme.py - Sistema de colores consistente
+THEME_COLORS = {
+    "primary": "#6366f1",      # Indigo moderno
+    "secondary": "#8b5cf6",    # Violeta elegante
+    "accent": "#06b6d4",       # Cyan vibrante
+    "neutral": "#64748b",      # Slate profesional
+    "success": "#10b981",      # Verde emerald
+    "warning": "#f59e0b",      # Amber llamativo
+    "error": "#ef4444",        # Rojo claro
+    "background": "#f8fafc",   # Fondo claro
+    "surface": "#ffffff",      # Blanco puro
+    "text": "#1e293b",         # Texto principal
+    "text_muted": "#64748b",   # Texto secundario
+}
+
+# Sistema de espaciado (8px base)
+SPACING = {
+    "xs": "0.25rem", "sm": "0.5rem", "md": "1rem", 
+    "lg": "1.5rem", "xl": "2rem", "2xl": "3rem", "3xl": "4rem"
+}
+```
+
+### Tipografía Profesional
+```python
+# Implementar jerarquía tipográfica clara
+TYPOGRAPHY = {
+    "font_family": "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    "headings": {
+        "h1": {"font_size": "2.25rem", "font_weight": "700", "line_height": "1.2"},
+        "h2": {"font_size": "1.875rem", "font_weight": "600", "line_height": "1.3"},
+        "h3": {"font_size": "1.5rem", "font_weight": "600", "line_height": "1.4"},
+    },
+    "body": {"font_size": "1rem", "line_height": "1.6"},
+    "small": {"font_size": "0.875rem", "line_height": "1.5"}
+}
+```
+
+## 📱 Responsividad Avanzada
+
+### Breakpoints Estratégicos
+```python
+BREAKPOINTS = {
+    "base": "0px",     # Mobile first
+    "sm": "640px",     # Mobile large
+    "md": "768px",     # Tablet
+    "lg": "1024px",    # Desktop
+    "xl": "1280px",    # Large desktop
+    "2xl": "1536px"    # Extra large
+}
+
+# Componente grid responsive ejemplo
+def responsive_grid(*children, columns=None) -> rx.Component:
+    return rx.box(
+        *children,
+        display="grid",
+        grid_template_columns=columns or {
+            "base": "1fr",
+            "md": "repeat(2, 1fr)", 
+            "lg": "repeat(3, 1fr)",
+            "xl": "repeat(4, 1fr)"
+        },
+        gap=SPACING["lg"],
+        padding=SPACING["md"],
+        width="100%"
+    )
+```
+
+## 🏗️ Arquitectura de Estado Reflex
+
+### Patrón Component-State-Props Estricto
+```python
+class AppState(rx.State):
+    # Estados UI esenciales
+    is_loading: bool = False
+    theme_mode: str = "light"
+    sidebar_open: bool = False
+    current_page: str = "home"
+    
+    # Estados de datos
+    current_user: dict = {}
+    notifications: list[dict] = []
+    
+    # Computed properties para lógica derivada
+    @rx.computed_var
+    def is_authenticated(self) -> bool:
+        return bool(self.current_user.get("id"))
+    
+    @rx.computed_var 
+    def unread_notifications(self) -> int:
+        return len([n for n in self.notifications if not n.get("read", False)])
+    
+    # Actions con manejo de errores robusto
+    async def fetch_user_data(self):
+        self.is_loading = True
+        try:
+            # Simular llamada API
+            await asyncio.sleep(0.5)
+            self.current_user = {"id": 1, "name": "Usuario"}
+        except Exception as e:
+            self.handle_error(f"Error cargando usuario: {str(e)}")
+        finally:
+            self.is_loading = False
+    
+    def handle_error(self, message: str):
+        print(f"Error: {message}")
+        # Implementar sistema de notificaciones
+```
+
+**Mantener la lógica de negocio en el Estado** - Los componentes deben ser ligeros y enfocados únicamente en la presentación visual.
+
+**Usar variables de estado condicionales** para renderizar componentes solo cuando sea necesario y optimizar re-renders.
+
+## 🎭 Componentes de Clase Mundial
+
+### Botones con Estados Avanzados
+```python
+def modern_button(
+    text: str, 
+    variant: str = "primary", 
+    size: str = "md",
+    loading: bool = False,
+    disabled: bool = False,
+    **props
+) -> rx.Component:
+    
+    styles = {
+        "primary": {
+            "bg": THEME_COLORS["primary"],
+            "hover_bg": "#5b5bf6",
+            "text": "white"
+        },
+        "secondary": {
+            "bg": THEME_COLORS["surface"],
+            "hover_bg": "#f1f5f9", 
+            "text": THEME_COLORS["text"],
+            "border": f"1px solid {THEME_COLORS['neutral']}"
+        }
+    }
+    
+    return rx.button(
+        rx.cond(
+            loading,
+            rx.hstack(
+                rx.spinner(size="sm"),
+                text,
+                spacing=SPACING["sm"]
+            ),
+            text
+        ),
+        background_color=styles[variant]["bg"],
+        color=styles[variant]["text"],
+        border=styles[variant].get("border", "none"),
+        padding=SPACING["sm"] + " " + SPACING["md"],
+        border_radius="0.75rem",
+        font_weight="600",
+        cursor="pointer" if not disabled else "not-allowed",
+        opacity="0.6" if disabled else "1",
+        transition="all 0.2s ease",
+        _hover={
+            "background_color": styles[variant]["hover_bg"],
+            "transform": "translateY(-1px)",
+            "box_shadow": "0 4px 12px rgba(0,0,0,0.15)"
+        } if not disabled else {},
+        _active={"transform": "translateY(0px)"} if not disabled else {},
+        disabled=disabled or loading,
+        **props
+    )
+```
+
+## 🛠️ Reflex/Python Específico
+
+**Usar rx.component** para construir interfaces de usuario reactivas con la máxima eficiencia.
+
+**Aprovechar el sistema de enrutamiento** (rx.route) integrado de Reflex para manejar navegación fluida entre páginas.
+
+**Utilizar rx.Model** para interacciones robustas con bases de datos (SQLite por defecto, PostgreSQL/SQL Server/Supabase para producción).
+
+**Aplicar rx.memo** para componentes costosos y optimizar el rendimiento de renderizado.
+
+**Usar SQLAlchemy** para toda interacción con bases de datos relacionales.
+
+```python
+# Ejemplo de modelo de datos
+class User(rx.Model, table=True):
+    id: int = rx.Field(primary_key=True)
+    name: str = rx.Field(max_length=100)
+    email: str = rx.Field(unique=True)
+    created_at: datetime = rx.Field(default_factory=datetime.now)
+    
+    @classmethod
+    async def get_by_email(cls, email: str):
+        with rx.session() as session:
+            return session.query(cls).filter(cls.email == email).first()
+```
+
+## ⚡ Optimización del Rendimiento
+
+**Usar funciones del Estado asíncronas** (async) para operaciones de E/O o de larga duración sin bloquear la UI.
+
+**Implementar caching** a nivel de la base de datos y en la lógica del Estado para mejor rendimiento.
+
+```python
+# Ejemplo de componente memoizado
+@rx.memo  
+def expensive_chart_component(data: list) -> rx.Component:
+    if not data:
+        return rx.box(
+            rx.spinner(),
+            rx.text("Cargando datos...", margin_top=SPACING["sm"]),
+            text_align="center",
+            padding=SPACING["xl"]
+        )
+    
+    return rx.recharts.line_chart(
+        rx.recharts.line(data_key="value", stroke=THEME_COLORS["primary"]),
+        rx.recharts.x_axis(data_key="date"),
+        rx.recharts.y_axis(),
+        data=data,
+        width="100%",
+        height=300
+    )
+```
+
+## 🔒 Manejo de Errores y Validación
+
+**Implementar manejo de errores a nivel del State** usando try-except robustos.
+
+**Usar las validaciones integradas** en los rx.Model y en las funciones del estado.
+
+```python
+# Validación en formularios
+def validate_email(email: str) -> tuple[bool, str]:
+    import re
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if re.match(pattern, email):
+        return True, ""
+    return False, "Email inválido"
+
+class FormState(rx.State):
+    email: str = ""
+    email_error: str = ""
+    
+    def validate_email_input(self, email: str):
+        self.email = email
+        is_valid, error_msg = validate_email(email)
+        self.email_error = error_msg
+```
+
+## 📦 Dependencias y Stack
+
+### Core Dependencies
+```python
+# requirements.txt
+reflex>=0.4.0
+sqlalchemy>=2.0.0
+alembic>=1.12.0
+pydantic>=2.0.0
+python-multipart    # File uploads
+pillow             # Image processing
+pytest>=7.0.0
+pytest-asyncio
+black              # Code formatting
+isort              # Import sorting
+```
+
+### Configuración de Producción
+```python
+# reflex_config.py
+config = rx.Config(
+    app_name="mi_app_profesional",
+    db_url=os.getenv("DATABASE_URL", "sqlite:///reflex.db"),
+    env=rx.Env.PROD if os.getenv("ENV") == "production" else rx.Env.DEV,
+    tailwind={
+        "theme": {
+            "extend": {
+                "colors": THEME_COLORS,
+                "spacing": SPACING,
+                "fontFamily": {
+                    "sans": ["Inter", "system-ui", "sans-serif"]
+                }
+            }
+        }
+    },
+    frontend_packages=["@tailwindcss/forms", "@tailwindcss/typography"]
+)
+```
+
+## 🏢 Estructura de Proyecto Modular
+
+```
+mi_app/
+├── components/
+│   ├── ui/              # Componentes base (botones, inputs, cards)
+│   │   ├── button.py
+│   │   ├── input.py     
+│   │   └── card.py
+│   ├── layout/          # Layouts y estructuras
+│   │   ├── header.py
+│   │   ├── sidebar.py
+│   │   └── shell.py
+│   └── features/        # Componentes específicos de funcionalidad
+│       ├── auth/
+│       └── dashboard/
+├── state/
+│   ├── auth_state.py    # Estados de autenticación
+│   ├── ui_state.py      # Estados de UI global  
+│   └── app_state.py     # Estado principal
+├── models/
+│   ├── user.py          # Modelos de base de datos
+│   └── base.py
+├── utils/
+│   ├── theme.py         # Sistema de diseño
+│   ├── helpers.py       # Funciones auxiliares
+│   └── constants.py     # Constantes
+├── pages/               # Páginas de la aplicación
+│   ├── index.py
+│   ├── dashboard.py
+│   └── auth/
+└── assets/             # Recursos estáticos
+```
+
+## ✅ Checklist de Calidad Obligatorio
+
+Antes de considerar completa cualquier funcionalidad, verificar:
+
+- [ ] **Responsividad**: ¿Funciona perfectamente en mobile, tablet y desktop?
+- [ ] **Estados UI**: ¿Tiene loading, error, empty states implementados?
+- [ ] **Diseño**: ¿Sigue el sistema de colores y espaciado definido?
+- [ ] **Performance**: ¿Está optimizado con memoización donde corresponde?
+- [ ] **Accesibilidad**: ¿Tiene contrast adecuado y navegación por teclado?
+- [ ] **Validación**: ¿Los formularios validan correctamente?
+- [ ] **Manejo de errores**: ¿Los errores se muestran de forma user-friendly?
+- [ ] **Consistencia**: ¿Usa los componentes del sistema de diseño?
+
+## 🎯 Patrones de Excelencia
+
+### Naming Conventions Estrictas
+- **Componentes**: `PascalCase` (ej: `UserProfileCard`, `ModernButton`)
+- **States**: `PascalCase` + `State` (ej: `AuthState`, `DashboardState`) 
+- **Funciones/variables**: `snake_case`
+- **Constantes**: `UPPER_SNAKE_CASE`
+- **Archivos**: `snake_case.py`
+
+### Comentarios y Documentación
+```python
+def create_user_card(user: dict, show_actions: bool = True) -> rx.Component:
+    """
+    Crea una tarjeta de usuario moderna y responsiva.
+    
+    Args:
+        user: Diccionario con datos del usuario (name, email, avatar_url)
+        show_actions: Si mostrar botones de acción en la tarjeta
+        
+    Returns:
+        Componente rx.Card con información del usuario
+    """
+    return rx.card(
+        # Implementación...
+    )
+```
+
+## 🚀 Filosofía Final
+
+**"Construye la UI con Python"** - Aprovechar al máximo la filosofía de Reflex manteniendo el código Python puro y limpio.
+
+**Priorizar la reactividad** y el manejo del Estado en cada etapa del desarrollo para interfaces fluidas.
+
+**Cada componente debe impresionar** - No conformarse con funcionalidad básica, siempre buscar la excelencia visual.
+
+**Mantener estructura clara y lógica** para mejorar la legibilidad y facilitar el mantenimiento a largo plazo.
+
+*Consultar siempre la documentación oficial de Reflex para las mejores prácticas actualizadas en manejo del estado, componentes y consideraciones de seguridad.*
+
+alwaysApply: true
+---
+

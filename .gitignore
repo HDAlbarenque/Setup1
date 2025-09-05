@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.log
+.env
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.coverage
+dist/
+build/
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+
+# Reflex / Frontend generado
+.web/
+.reflex/
+node_modules/
+reflex.db
+
