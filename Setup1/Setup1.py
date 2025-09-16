@@ -39,7 +39,7 @@ class State(rx.State):
     # Menú items
     menu_items: List[Dict[str, str]] = [
         {"id": "dashboard", "label": "Dashboard", "icon": "📊"},
-        {"id": "archivos", "label": "Archivos", "icon": "📁"},
+        {"id": "archivos", "label": "Archivo", "icon": "📁"},
         {"id": "tasks", "label": "Tareas", "icon": "✅"},
         {"id": "team", "label": "Equipo", "icon": "👥"},
         {"id": "settings", "label": "Configuración", "icon": "⚙️"},
@@ -73,7 +73,7 @@ class State(rx.State):
                 {"id": "widgets", "label": "Widgets", "type": "page"},
             ],
             "archivos": [
-                {"id": "importar_actividades", "label": "Importar actividades", "type": "page"},
+                {"id": "importar_actividades_crm", "label": "Importar actividades CRM", "type": "page", "icon": "/excel_icon.png"},
             ],
         }
         
@@ -211,7 +211,25 @@ def submenu_item(item: dict) -> rx.Component:
     """Componente individual del submenú."""
     return rx.button(
         rx.hstack(
-            rx.text("📄", font_size="1rem"),
+            rx.cond(
+                item.get("icon", ""),
+                rx.cond(
+                    item["icon"].startswith("/"),
+                    rx.image(
+                        src=item["icon"], 
+                        width=rx.cond(item["id"] == "importar_actividades_crm", "1.5rem", "1rem"),
+                        height=rx.cond(item["id"] == "importar_actividades_crm", "1.5rem", "1rem")
+                    ),
+                    rx.text(
+                        item["icon"], 
+                        font_size=rx.cond(item["id"] == "importar_actividades_crm", "1.5rem", "1rem")
+                    ),
+                ),
+                rx.text(
+                    "📄", 
+                    font_size=rx.cond(item["id"] == "importar_actividades_crm", "1.5rem", "1rem")
+                ),
+            ),
             rx.text(item["label"], font_size="0.875rem", font_weight="500"),
             spacing="3",
             align="center",
@@ -228,7 +246,7 @@ def submenu_item(item: dict) -> rx.Component:
         justify_content="flex-start",
         _hover={"background_color": THEME_COLORS["hover"]},
         on_click=rx.cond(
-            item["id"] == "importar_actividades",
+            item["id"] == "importar_actividades_crm",
             ImportDialogState.open_dialog,
             State.navigate_to_page(item["id"], item["label"]),
         ),

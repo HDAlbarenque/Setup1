@@ -58,7 +58,7 @@ class AppState(rx.State):
                 {"id": "filter_date", "label": "Filtrar por fecha", "type": "input"},
             ],
             "archivos": [
-                {"id": "importar_actividades", "label": "Importar actividades", "type": "page"},
+                {"id": "importar_actividades", "label": "Importar actividades CRM", "type": "page"},
             ],
             "tasks": [
                 {"id": "pending", "label": "Pendientes", "type": "page"},
@@ -158,7 +158,7 @@ class ImportState(rx.State):
                 tmp_path = tmp.name
 
             # Ejecutar importación
-            from utils.excel_importer import import_actividades_from_excel
+            from utils.xls_import_crm import import_actividades_from_excel
 
             inserted = import_actividades_from_excel(tmp_path)
             self.last_result_message = f"Importación completada. Registros insertados: {inserted}."
