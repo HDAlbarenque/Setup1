@@ -23,4 +23,21 @@ build/
 .reflex/
 node_modules/
 reflex.db
+.states/
 
+# Archivos de Excel
+*.xlsx
+*.xls
+*.csv
+
+# Archivos de SQLite
+Setup.db
+
+# Archivos de configuración
+reflex.db
+
+# Archivos de Word
+*.docx
+
+# Carpeta de Documentación
+Documentation/

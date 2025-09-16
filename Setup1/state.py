@@ -22,8 +22,7 @@ class AppState(rx.State):
     # Datos del menú principal (generados aleatoriamente)
     menu_items: List[Dict[str, str]] = [
         {"id": "dashboard", "label": "Dashboard", "icon": "📊"},
-        {"id": "analytics", "label": "Analytics", "icon": "📈"},
-        {"id": "projects", "label": "Proyectos", "icon": "📁"},
+        {"id": "archivos", "label": "Archivos", "icon": "📁"},
         {"id": "tasks", "label": "Tareas", "icon": "✅"},
         {"id": "team", "label": "Equipo", "icon": "👥"},
         {"id": "settings", "label": "Configuración", "icon": "⚙️"},
@@ -31,14 +30,12 @@ class AppState(rx.State):
         {"id": "calendar", "label": "Calendario", "icon": "📅"},
     ]
     
-    def __init__(self):
-        super().__init__()
-        # Generar colores aleatorios disponibles
-        self.available_colors = [
-            "#6366f1", "#8b5cf6", "#06b6d4", "#10b981", 
-            "#f59e0b", "#ef4444", "#ec4899", "#14b8a6",
-            "#8b5cf6", "#f97316", "#84cc16", "#3b82f6"
-        ]
+    # Colores disponibles para resaltar el título de página
+    available_colors: List[str] = [
+        "#6366f1", "#8b5cf6", "#06b6d4", "#10b981", 
+        "#f59e0b", "#ef4444", "#ec4899", "#14b8a6",
+        "#8b5cf6", "#f97316", "#84cc16", "#3b82f6",
+    ]
     
     def toggle_submenu(self, menu_id: str):
         """Alternar visibilidad del submenú."""
@@ -60,17 +57,8 @@ class AppState(rx.State):
                 {"id": "widgets", "label": "Widgets", "type": "page"},
                 {"id": "filter_date", "label": "Filtrar por fecha", "type": "input"},
             ],
-            "analytics": [
-                {"id": "visitors", "label": "Visitantes", "type": "page"},
-                {"id": "conversions", "label": "Conversiones", "type": "page"},
-                {"id": "revenue", "label": "Ingresos", "type": "page"},
-                {"id": "period", "label": "Período de análisis", "type": "select"},
-            ],
-            "projects": [
-                {"id": "active", "label": "Proyectos Activos", "type": "page"},
-                {"id": "completed", "label": "Completados", "type": "page"},
-                {"id": "archived", "label": "Archivados", "type": "page"},
-                {"id": "search", "label": "Buscar proyecto", "type": "input"},
+            "archivos": [
+                {"id": "importar_actividades", "label": "Importar actividades", "type": "page"},
             ],
             "tasks": [
                 {"id": "pending", "label": "Pendientes", "type": "page"},
@@ -116,5 +104,103 @@ class AppState(rx.State):
     def close_submenu(self):
         """Cerrar el submenú."""
         self.submenu_open = False
+
+
+class ImportState(rx.State):
+    """Maneja la importación de actividades desde Excel."""
+
+    is_importing: bool = False
+    last_result_message: str = ""
+    # Clave para forzar el remount del componente upload tras cada importación
+    upload_key: int = 0
+    # Flag para controlar si mostrar el mensaje
+    show_result_message: bool = False
+
+    def reset_feedback(self):
+        """Limpia mensajes y estados para permitir nuevas importaciones."""
+        self.is_importing = False
+        self.last_result_message = ""
+        self.show_result_message = False
+        self.upload_key += 1  # Forzar remount del upload component
+
+    async def import_actividades_from_upload(self, files: list[rx.UploadFile]):
+        """Procesa el archivo subido y realiza la importación.
+
+        Espera uno (1) archivo .xls/.xlsx y persiste los datos en SQLite.
+        """
+        if not files:
+            self.last_result_message = "No se seleccionó ningún archivo."
+            self.show_result_message = True
+            return
+
+        file = files[0]
+        # Algunas versiones exponen .name en lugar de .filename
+        filename = getattr(file, "filename", None) or getattr(file, "name", None) or "archivo.xlsx"
+
+        # Guardar temporalmente el archivo en disco para pasarlo a openpyxl
+        # Reflex expone file.read() async
+        from pathlib import Path
+        import tempfile
+
+        # Solo permitir extensiones esperadas
+        allowed_ext = {".xls", ".xlsx"}
+        ext = Path(filename).suffix.lower()
+        if ext not in allowed_ext:
+            self.last_result_message = "Formato no soportado. Selecciona .xls o .xlsx"
+            self.show_result_message = True
+            return
+
+        self.is_importing = True
+        try:
+            data = await file.read()
+            with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+                tmp.write(data)
+                tmp_path = tmp.name
+
+            # Ejecutar importación
+            from utils.excel_importer import import_actividades_from_excel
+
+            inserted = import_actividades_from_excel(tmp_path)
+            self.last_result_message = f"Importación completada. Registros insertados: {inserted}."
+            self.show_result_message = True
+        except Exception as e:
+            self.last_result_message = f"Error en importación: {str(e)}"
+            self.show_result_message = True
+        finally:
+            self.is_importing = False
+            # Forzar que el componente de subida se remonte y limpie archivos previos
+            self.upload_key += 1
+
+
+class ImportDialogState(rx.State):
+    """Estado para controlar la apertura del diálogo de importación."""
+
+    open: bool = False
+
+    def open_dialog(self):
+        """Abre el diálogo y resetea el estado de importación."""
+        # Resetear estado de importación
+        yield ImportState.reset_feedback
+        # Abrir el diálogo
+        self.open = True
+
+    def close_dialog(self):
+        # Al cerrar el diálogo
+        self.open = False
+
+    # Setter explícito para compatibilidad futura (evita reliance en auto-setters)
+    def set_open(self, value: bool):
+        self.open = bool(value)
+
+    def on_open_change(self, value: bool):
+        """Controla apertura/cierre del diálogo desde el UI.
+
+        - Al abrir, limpia mensajes/estados de importación
+        - Ajusta el flag `open` según el valor recibido
+        """
+        self.open = bool(value)
+        if value:
+            # Al abrir, resetear el estado de importación usando yield
+            yield ImportState.reset_feedback
 
 

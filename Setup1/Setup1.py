@@ -3,6 +3,7 @@
 import reflex as rx
 import random
 from typing import Dict, List
+from Setup1.state import ImportDialogState, ImportState
 
 # Colores del tema basados en la imagen
 THEME_COLORS = {
@@ -38,8 +39,7 @@ class State(rx.State):
     # Menú items
     menu_items: List[Dict[str, str]] = [
         {"id": "dashboard", "label": "Dashboard", "icon": "📊"},
-        {"id": "analytics", "label": "Analytics", "icon": "📈"},
-        {"id": "projects", "label": "Proyectos", "icon": "📁"},
+        {"id": "archivos", "label": "Archivos", "icon": "📁"},
         {"id": "tasks", "label": "Tareas", "icon": "✅"},
         {"id": "team", "label": "Equipo", "icon": "👥"},
         {"id": "settings", "label": "Configuración", "icon": "⚙️"},
@@ -72,15 +72,8 @@ class State(rx.State):
                 {"id": "metrics", "label": "Métricas", "type": "page"},
                 {"id": "widgets", "label": "Widgets", "type": "page"},
             ],
-            "analytics": [
-                {"id": "visitors", "label": "Visitantes", "type": "page"},
-                {"id": "conversions", "label": "Conversiones", "type": "page"},
-                {"id": "revenue", "label": "Ingresos", "type": "page"},
-            ],
-            "projects": [
-                {"id": "active", "label": "Proyectos Activos", "type": "page"},
-                {"id": "completed", "label": "Completados", "type": "page"},
-                {"id": "archived", "label": "Archivados", "type": "page"},
+            "archivos": [
+                {"id": "importar_actividades", "label": "Importar actividades", "type": "page"},
             ],
         }
         
@@ -214,12 +207,12 @@ def main_menu() -> rx.Component:
     )
 
 
-def submenu_item(item_id: str, label: str) -> rx.Component:
+def submenu_item(item: dict) -> rx.Component:
     """Componente individual del submenú."""
     return rx.button(
         rx.hstack(
             rx.text("📄", font_size="1rem"),
-            rx.text(label, font_size="0.875rem", font_weight="500"),
+            rx.text(item["label"], font_size="0.875rem", font_weight="500"),
             spacing="3",
             align="center",
             width="100%",
@@ -234,7 +227,11 @@ def submenu_item(item_id: str, label: str) -> rx.Component:
         text_align="left",
         justify_content="flex-start",
         _hover={"background_color": THEME_COLORS["hover"]},
-        on_click=State.navigate_to_page(item_id, label),
+        on_click=rx.cond(
+            item["id"] == "importar_actividades",
+            ImportDialogState.open_dialog,
+            State.navigate_to_page(item["id"], item["label"]),
+        ),
     )
 
 
@@ -274,7 +271,7 @@ def submenu() -> rx.Component:
                 rx.box(
                     rx.foreach(
                         State.submenu_items,
-                        lambda item: submenu_item(item["id"], item["label"])
+                        lambda item: submenu_item(item)
                     ),
                     width="100%",
                     padding=f"0 {SPACING['lg']}",
@@ -336,10 +333,63 @@ def work_area() -> rx.Component:
 
 def index() -> rx.Component:
     """Layout principal de la aplicación."""
+    def import_dialog():
+        return rx.dialog.root(
+            rx.dialog.trigger(rx.box()),
+            rx.dialog.content(
+                rx.vstack(
+                    rx.hstack(
+                        rx.text("Importar actividades", font_weight="700", font_size="1.125rem"),
+                        rx.button(
+                            "✕",
+                            size="2",
+                            background_color="transparent",
+                            color=THEME_COLORS["text_secondary"],
+                            border="none",
+                            cursor="pointer",
+                            _hover={"color": THEME_COLORS["text_primary"]},
+                            on_click=ImportDialogState.close_dialog,
+                        ),
+                        justify="between",
+                        align="center",
+                        width="100%",
+                    ),
+                    rx.upload(
+                        rx.vstack(
+                            rx.icon(tag="upload"),
+                            rx.text("Selecciona o suelta un archivo .xls/.xlsx"),
+                            spacing="2",
+                            align="center",
+                        ),
+                        multiple=False,
+                        accept={"application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+                        max_files=1,
+                        on_drop=ImportState.import_actividades_from_upload(rx.upload_files()),
+                        key=ImportState.upload_key,
+                    ),
+                    rx.cond(
+                        ImportState.is_importing,
+                        rx.hstack(rx.spinner(), rx.text("Importando..."), spacing="2"),
+                        rx.cond(
+                            ImportState.show_result_message,
+                            rx.text(ImportState.last_result_message, color=THEME_COLORS["text_secondary"]),
+                            rx.box()  # Elemento vacío cuando no hay mensaje
+                        )
+                    ),
+                    spacing="4",
+                    width="100%",
+                ),
+                style={"width": "480px", "maxWidth": "90vw"},
+            ),
+            open=ImportDialogState.open,
+            on_open_change=ImportDialogState.on_open_change,
+        )
+
     return rx.box(
         main_menu(),
         submenu(),
         work_area(),
+        import_dialog(),
         width="100%",
         height="100vh",
         overflow="hidden",
