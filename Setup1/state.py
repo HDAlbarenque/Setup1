@@ -3,6 +3,8 @@
 import reflex as rx
 import random
 from typing import Dict, List, Optional
+from pathlib import Path
+import tempfile
 
 class AppState(rx.State):
     """Estado principal de la aplicación que maneja navegación y UI."""
@@ -139,8 +141,6 @@ class ImportState(rx.State):
 
         # Guardar temporalmente el archivo en disco para pasarlo a openpyxl
         # Reflex expone file.read() async
-        from pathlib import Path
-        import tempfile
 
         # Solo permitir extensiones esperadas
         allowed_ext = {".xls", ".xlsx"}
@@ -202,5 +202,74 @@ class ImportDialogState(rx.State):
         if value:
             # Al abrir, resetear el estado de importación usando yield
             yield ImportState.reset_feedback
+
+
+class ImportDarioState(rx.State):
+    """Maneja la importación de 'Actividades Darío'."""
+
+    is_importing: bool = False
+    last_result_message: str = ""
+    show_result_message: bool = False
+    upload_key: int = 0
+    numero_responsable: str = ""
+
+    def reset_feedback(self):
+        """Limpia el estado para una nueva importación."""
+        self.is_importing = False
+        self.last_result_message = ""
+        self.show_result_message = False
+        self.upload_key += 1
+
+    async def handle_upload(self, files: list[rx.UploadFile]):
+        """Gestiona el archivo subido y lanza la importación."""
+        if not files:
+            self.last_result_message = "No se seleccionó ningún archivo."
+            self.show_result_message = True
+            return
+
+        try:
+            num_resp = int(self.numero_responsable)
+        except (ValueError, TypeError):
+            self.last_result_message = "El 'Número de Responsable' debe ser un entero válido."
+            self.show_result_message = True
+            return
+        
+        file = files[0]
+        filename = getattr(file, "filename", "archivo.xlsx")
+        ext = Path(filename).suffix.lower()
+        if ext not in {".xls", ".xlsx"}:
+            self.last_result_message = f"Extensión no soportada: {ext}"
+            self.show_result_message = True
+            return
+        
+        self.is_importing = True
+        self.show_result_message = False
+        try:
+            data = await file.read()
+            with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+                tmp.write(data)
+                tmp_path = tmp.name
+            
+            from utils.xls_import_dario import import_actividades_dario
+            inserted = import_actividades_dario(tmp_path, num_resp)
+            self.last_result_message = f"Importación completada. Se insertaron {inserted} registros."
+        except Exception as e:
+            self.last_result_message = f"Error en la importación: {e}"
+        finally:
+            self.is_importing = False
+            self.show_result_message = True
+            self.upload_key += 1
+
+
+class ImportDarioDialogState(rx.State):
+    """Controla la visibilidad del diálogo de importación de 'Actividades Darío'."""
+    
+    open: bool = False
+
+    def change(self, open_status: bool):
+        self.open = open_status
+        if open_status:
+            # Resetear estado al abrir
+            yield ImportDarioState.reset_feedback
 
 

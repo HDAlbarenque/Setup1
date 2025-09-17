@@ -2,7 +2,7 @@ import os
 from datetime import date
 from typing import Optional
 
-from sqlalchemy import Column, Date, Integer, String, create_engine, text
+from sqlalchemy import Column, Date, Integer, String, create_engine, text, DateTime, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
@@ -22,6 +22,23 @@ class TMPActividades(Base):
     numero_act = Column(Integer, nullable=True)
     asunto = Column(String(512), nullable=True)
     horas = Column(String(16), nullable=True)  # Formato HH:MM:SS
+
+
+class TMPActividadesDario(Base):
+    __tablename__ = "TMP_Actividades_Dario"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    size = Column(String(2), nullable=True)
+    numero = Column(Integer, nullable=True)
+    nombre = Column(Text, nullable=True)
+    comienzo = Column(DateTime, nullable=True)
+    fin = Column(DateTime, nullable=True)
+    sintesis = Column(Text, nullable=True)
+    observaciones = Column(Text, nullable=True)
+    vcx_s = Column(Text, nullable=True)
+    req_sincro = Column(Text, nullable=True)
+    version = Column(Text, nullable=True)
+    numero_responsable = Column(Integer, nullable=False)
 
 
 def get_engine():

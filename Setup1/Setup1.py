@@ -3,7 +3,12 @@
 import reflex as rx
 import random
 from typing import Dict, List
-from Setup1.state import ImportDialogState, ImportState
+from Setup1.state import (
+    ImportDialogState, 
+    ImportState, 
+    ImportDarioState, 
+    ImportDarioDialogState
+)
 
 # Colores del tema basados en la imagen
 THEME_COLORS = {
@@ -74,6 +79,7 @@ class State(rx.State):
             ],
             "archivos": [
                 {"id": "importar_actividades_crm", "label": "Importar actividades CRM", "type": "page", "icon": "/excel_icon.png"},
+                {"id": "importar_actividades_dario", "label": "Importar actividades Darío", "type": "page", "icon": "/excel_icon.png"},
             ],
         }
         
@@ -92,6 +98,18 @@ class State(rx.State):
     def close_submenu(self):
         """Cerrar el submenú."""
         self.submenu_open = False
+
+    def open_crm_import_dialog(self):
+        """Abre el diálogo de importación y limpia el título de la página de fondo."""
+        self.page_title = ""
+        self.current_page = ""
+        yield ImportDialogState.open_dialog
+
+    def open_dario_import_dialog(self):
+        """Abre el diálogo de Darío y limpia el fondo."""
+        self.page_title = ""
+        self.current_page = ""
+        yield ImportDarioDialogState.change(True)
 
 
 def menu_item(item_id: str, label: str, icon: str) -> rx.Component:
@@ -217,17 +235,17 @@ def submenu_item(item: dict) -> rx.Component:
                     item["icon"].startswith("/"),
                     rx.image(
                         src=item["icon"], 
-                        width=rx.cond(item["id"] == "importar_actividades_crm", "1.5rem", "1rem"),
-                        height=rx.cond(item["id"] == "importar_actividades_crm", "1.5rem", "1rem")
+                        width=rx.cond((item["id"] == "importar_actividades_crm") | (item["id"] == "importar_actividades_dario"), "1.5rem", "1rem"),
+                        height=rx.cond((item["id"] == "importar_actividades_crm") | (item["id"] == "importar_actividades_dario"), "1.5rem", "1rem")
                     ),
                     rx.text(
                         item["icon"], 
-                        font_size=rx.cond(item["id"] == "importar_actividades_crm", "1.5rem", "1rem")
+                        font_size=rx.cond((item["id"] == "importar_actividades_crm") | (item["id"] == "importar_actividades_dario"), "1.5rem", "1rem")
                     ),
                 ),
                 rx.text(
                     "📄", 
-                    font_size=rx.cond(item["id"] == "importar_actividades_crm", "1.5rem", "1rem")
+                    font_size=rx.cond((item["id"] == "importar_actividades_crm") | (item["id"] == "importar_actividades_dario"), "1.5rem", "1rem")
                 ),
             ),
             rx.text(item["label"], font_size="0.875rem", font_weight="500"),
@@ -247,8 +265,12 @@ def submenu_item(item: dict) -> rx.Component:
         _hover={"background_color": THEME_COLORS["hover"]},
         on_click=rx.cond(
             item["id"] == "importar_actividades_crm",
-            ImportDialogState.open_dialog,
-            State.navigate_to_page(item["id"], item["label"]),
+            State.open_crm_import_dialog,
+            rx.cond(
+                item["id"] == "importar_actividades_dario",
+                State.open_dario_import_dialog,
+                State.navigate_to_page(item["id"], item["label"]),
+            )
         ),
     )
 
@@ -330,12 +352,15 @@ def work_area() -> rx.Component:
                     text_align="center",
                     line_height="1.2",
                 ),
-                rx.text(
-                    f"Página actual: {State.current_page}",
-                    font_size="1.125rem",
-                    color=THEME_COLORS["text_secondary"],
-                    text_align="center",
-                    margin_top=SPACING["lg"],
+                rx.cond(
+                    State.current_page != "",
+                    rx.text(
+                        f"Página actual: {State.current_page}",
+                        font_size="1.125rem",
+                        color=THEME_COLORS["text_secondary"],
+                        text_align="center",
+                        margin_top=SPACING["lg"],
+                    ),
                 ),
                 spacing="4",
                 align="center",
@@ -403,11 +428,76 @@ def index() -> rx.Component:
             on_open_change=ImportDialogState.on_open_change,
         )
 
+    def import_dario_dialog():
+        return rx.dialog.root(
+            rx.dialog.content(
+                rx.vstack(
+                    rx.hstack(
+                        rx.text("Importar Actividades Darío", font_weight="700", font_size="1.125rem"),
+                        rx.dialog.close(
+                            rx.button(
+                                "✕",
+                                size="2",
+                                background_color="transparent",
+                                color=THEME_COLORS["text_secondary"],
+                                border="none",
+                                cursor="pointer",
+                                _hover={"color": THEME_COLORS["text_primary"]},
+                            ),
+                        ),
+                        justify="between",
+                        align="center",
+                        width="100%",
+                    ),
+                    rx.input(
+                        placeholder="Número de Responsable",
+                        value=ImportDarioState.numero_responsable,
+                        on_change=ImportDarioState.set_numero_responsable,
+                        margin_top=SPACING["md"],
+                        width="100%",
+                    ),
+                    rx.upload(
+                        rx.vstack(
+                            rx.icon(tag="upload"),
+                            rx.text("Selecciona o suelta un archivo .xls/.xlsx"),
+                            spacing="2",
+                            align="center",
+                        ),
+                        multiple=False,
+                        accept={
+                            "application/vnd.ms-excel": [".xls"],
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+                        },
+                        max_files=1,
+                        on_drop=ImportDarioState.handle_upload(rx.upload_files()),
+                        key=ImportDarioState.upload_key,
+                        margin_top=SPACING["md"],
+                        border=f"2px dashed {THEME_COLORS['border']}",
+                        padding=SPACING["lg"],
+                    ),
+                    rx.cond(
+                        ImportDarioState.is_importing,
+                        rx.hstack(rx.spinner(), rx.text("Importando..."), spacing="2"),
+                        rx.cond(
+                            ImportDarioState.show_result_message,
+                            rx.text(ImportDarioState.last_result_message, color=THEME_COLORS["text_secondary"]),
+                        ),
+                    ),
+                    spacing="4",
+                    width="100%",
+                ),
+                style={"width": "480px", "maxWidth": "90vw"},
+            ),
+            open=ImportDarioDialogState.open,
+            on_open_change=ImportDarioDialogState.change,
+        )
+
     return rx.box(
         main_menu(),
         submenu(),
         work_area(),
         import_dialog(),
+        import_dario_dialog(),
         width="100%",
         height="100vh",
         overflow="hidden",
