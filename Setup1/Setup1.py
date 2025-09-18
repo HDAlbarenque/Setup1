@@ -25,6 +25,7 @@ THEME_COLORS = {
 }
 
 SPACING = {
+    "xs": "0.25rem",
     "sm": "0.5rem",
     "md": "1rem", 
     "lg": "1.5rem",
@@ -78,8 +79,10 @@ class State(rx.State):
                 {"id": "widgets", "label": "Widgets", "type": "page"},
             ],
             "archivos": [
-                {"id": "importar_actividades_crm", "label": "Importar actividades CRM", "type": "page", "icon": "/excel_icon.png"},
-                {"id": "importar_actividades_dario", "label": "Importar actividades Darío", "type": "page", "icon": "/excel_icon.png"},
+                {"type": "title", "label": "Importación"},
+                {"id": "importar_actividades_crm", "label": "Actividades CRM", "type": "page", "icon": "/excel_icon.png"},
+                {"id": "importar_actividades_dario", "label": "Actividades anotaciones Darío", "type": "page", "icon": "/excel_icon.png"},
+                {"id": "procesar_importaciones", "label": "Procesar importaciones", "type": "page", "icon": "/Procesar_icono.png"},
             ],
         }
         
@@ -110,6 +113,20 @@ class State(rx.State):
         self.page_title = ""
         self.current_page = ""
         yield ImportDarioDialogState.change(True)
+
+
+def submenu_title(label: str) -> rx.Component:
+    """Un título estilizado para secciones del submenú."""
+    return rx.text(
+        label,
+        font_size="0.75rem",
+        font_weight="600",
+        color=THEME_COLORS["text_secondary"],
+        text_transform="uppercase",
+        letter_spacing="0.05em",
+        padding_y=SPACING["sm"],
+        margin_top=SPACING["md"],
+    )
 
 
 def menu_item(item_id: str, label: str, icon: str) -> rx.Component:
@@ -248,9 +265,13 @@ def submenu_item(item: dict) -> rx.Component:
                     font_size=rx.cond((item["id"] == "importar_actividades_crm") | (item["id"] == "importar_actividades_dario"), "1.5rem", "1rem")
                 ),
             ),
-            rx.text(item["label"], font_size="0.875rem", font_weight="500"),
+            rx.text(
+                item["label"],
+                font_size="0.875rem",
+                font_weight="500",
+            ),
             spacing="3",
-            align="center",
+            align="start",
             width="100%",
         ),
         width="100%",
@@ -311,7 +332,15 @@ def submenu() -> rx.Component:
                 rx.box(
                     rx.foreach(
                         State.submenu_items,
-                        lambda item: submenu_item(item)
+                        lambda item: rx.cond(
+                            item["type"] == "title",
+                            submenu_title(item["label"]),
+                            rx.box(
+                                submenu_item(item),
+                                padding_left="0.5rem",  # Sangría para los ítems
+                                margin_bottom=SPACING["xs"],
+                            )
+                        )
                     ),
                     width="100%",
                     padding=f"0 {SPACING['lg']}",
